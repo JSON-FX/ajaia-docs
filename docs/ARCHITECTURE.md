@@ -64,13 +64,25 @@
 | Database | Neon Postgres (free tier) | Auto-suspends but wakes on request. Reviewers may open this days later and must not hit a dead app; Supabase free projects pause after extended idle. |
 | ORM | Prisma | Typed queries and trivial seeding. Also made swapping from a local Docker Postgres to Neon a one-line change mid-build. |
 | Editor | TipTap v2, free core only | `StarterKit` + `Underline`. Nothing from `@tiptap-pro/*` — the brief forbids paid dependencies. |
-| Sanitizer | `isomorphic-dompurify` | We persist user-supplied HTML. This is the XSS boundary. |
+| Sanitizer | `sanitize-html` | We persist user-supplied HTML. This is the XSS boundary. Started on `isomorphic-dompurify` per the original plan; it broke in production — see below. |
 | Parsers | `mammoth` (.docx), `marked` (.md) | Both free, both server-side. |
 | Tests | Vitest | Fast, zero-config with TypeScript. |
 | Styling | Tailwind | Speed. |
 | Deploy | Vercel | Native Next.js target. |
 
 No paid dependency or service is required to review this app.
+
+**The sanitizer was changed after deployment, not before.** The plan specified
+`isomorphic-dompurify`, and it worked locally in both dev and `next start`. On Vercel it
+failed: that package depends on jsdom, which resolves internals through dynamic requires
+that neither Turbopack nor webpack could trace into a serverless bundle. Every route
+importing `lib/sanitize.ts` threw at module load, so `PATCH /api/documents/:id` and
+`POST /api/upload` both returned an opaque 500 while routes that did not import it were
+fine — saving a document was broken in production. `serverExternalPackages` and a webpack
+production build were each tried and neither fixed it. `sanitize-html` is pure JavaScript
+with no DOM emulation, so there is nothing to fail to bundle. It is allowlist-based in the
+same way, and its output was verified byte-for-byte identical to DOMPurify's across all 12
+payloads in `tests/sanitize.test.ts` before the swap was committed.
 
 **Two versions were pinned deliberately.** Prisma installed as v7, which removed `url`
 from the datasource block in favour of a `prisma.config.ts` and a driver adapter; that is

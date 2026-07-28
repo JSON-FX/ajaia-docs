@@ -5,8 +5,8 @@ assignment.
 
 | | |
 |---|---|
-| **Live app** | _(pending deploy)_ |
-| **Repository** | _(pending push)_ |
+| **Live app** | **https://ajaia-docs-assessment-jayson-alanano.vercel.app** |
+| **Repository** | **https://github.com/JSON-FX/ajaia-docs** |
 | **Walkthrough video** | see `walkthrough-video.txt` |
 | **Sign in as** | `alice@ajaia.test` — one click, no password |
 

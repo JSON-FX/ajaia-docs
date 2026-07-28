@@ -3,7 +3,7 @@
 A lightweight collaborative document editor — create, format, upload, and share documents
 with per-user Viewer/Editor permissions.
 
-> **Live demo:** _(pending deploy — see “Deployment” below)_
+> **Live demo:** **https://ajaia-docs-assessment-jayson-alanano.vercel.app**
 >
 > **Sign in as `alice@ajaia.test`.** One click, no password. Alice already owns two
 > documents and has a third shared with her by Bob as a **Viewer**, so the sharing and
@@ -65,7 +65,7 @@ Sample files to try are in [`samples/`](samples/).
 
 Uploaded files are parsed into HTML on the server and **the original bytes are
 discarded** — nothing is written to disk or object storage. See
-[ARCHITECTURE.md](ARCHITECTURE.md) for why.
+[ARCHITECTURE.md](docs/ARCHITECTURE.md) for why.
 
 ---
 
@@ -141,7 +141,7 @@ Prisma client.
   **403 at the HTTP boundary** — a unit test of the resolver alone would still pass if a
   route forgot to call it.
 - `tests/sanitize.test.ts` — the XSS boundary, with 12 payloads. Added after a real bug;
-  see [AI_WORKFLOW.md](AI_WORKFLOW.md).
+  see [AI_WORKFLOW.md](docs/AI_WORKFLOW.md).
 
 ---
 
@@ -162,8 +162,8 @@ requires.
 
 ## Documentation
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — stack rationale, data model, the access-control
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — stack rationale, data model, the access-control
   chokepoint, the parse-and-discard upload decision, and what was deliberately cut.
-- [AI_WORKFLOW.md](AI_WORKFLOW.md) — how AI was used, what was rejected, and how the work
+- [AI_WORKFLOW.md](docs/AI_WORKFLOW.md) — how AI was used, what was rejected, and how the work
   was verified.
-- [SUBMISSION.md](SUBMISSION.md) — deliverables manifest and project status.
+- [SUBMISSION.md](docs/SUBMISSION.md) — deliverables manifest and project status.

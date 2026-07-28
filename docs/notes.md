@@ -50,6 +50,17 @@ because the code looked correct in review both times.
    Fix: dropped `USE_PROFILES`; added `tests/sanitize.test.ts` with 12 payloads so it
    cannot regress.
 
+3. **The sanitizer broke only in production.** Deployed to Vercel, then probed the live
+   API — `PATCH` and `POST /api/upload` returned 500 while every route that doesn't import
+   `lib/sanitize.ts` returned fine. That selectivity is what identified it as a module-load
+   failure rather than handler logic. `isomorphic-dompurify` → jsdom → dynamic requires the
+   bundler can't trace into a serverless function. Tried `serverExternalPackages`, then a
+   `--webpack` build; neither worked. Replaced with `sanitize-html` (pure JS, no DOM
+   emulation) after confirming byte-identical output on all 12 XSS payloads. Never
+   reproduced locally — `next start` still resolves from node_modules on disk.
+   **This is the case for deploying early: the app was 100% working locally and would have
+   shipped broken.**
+
 ## Tests
 
 Kept `access.test.ts` (required) and added `sanitize.test.ts` off the back of bug #2 —

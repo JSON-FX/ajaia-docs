@@ -85,7 +85,50 @@ Fixed by capturing the post-normalisation HTML in `onCreate` as a baseline and o
 reporting genuine divergence from it. Nothing about the original code looked wrong; it
 was only visible in the network tab on a page where nothing had been typed.
 
-### 3. Stack defaults that needed overriding
+### 3. A dependency that passed every local check and still broke production
+
+The plan specified `isomorphic-dompurify` as the sanitizer. It worked in `next dev`, it
+worked in a local production build under `next start`, and all 21 tests passed against it.
+It failed on Vercel.
+
+The symptom was an opaque 500 with an HTML error page — no message, no stack. What made it
+diagnosable was that the failure was *selective*:
+
+```
+/api/documents          (no sanitize import)   200
+/api/documents/[id]     (imports sanitize)     500
+/[id]/shares            (access only)          200
+/api/upload             (imports sanitize)     500
+/doc/[id] page          (no sanitize import)   200
+```
+
+Every route importing `lib/sanitize.ts` failed and nothing else did, which places the
+fault at module load rather than in any handler logic. The cause: `isomorphic-dompurify`
+depends on jsdom, which resolves internals through dynamic requires that the bundler
+cannot trace statically, so the serverless function shipped without them.
+
+It never reproduced locally because a local production server can still fall back to
+`node_modules` on disk — the packaging step that breaks it only happens on the platform.
+
+Two fixes were tried and rejected because they did not work: `serverExternalPackages`
+(opting the package out of bundling) and building with `--webpack` instead of Next 16's
+default Turbopack. Rather than keep guessing at bundler configuration against a black box,
+the dependency was replaced with `sanitize-html`, which is pure JavaScript with no DOM
+emulation and therefore has nothing to fail to bundle. Before committing the swap, the
+same 12 payloads were run through the new implementation and produced **byte-for-byte
+identical output** to DOMPurify — so the security boundary was proven equivalent, not
+assumed.
+
+**Two lessons.** First, "works locally" is not a deployment signal for anything with
+native or dynamic-require dependencies; the packaging step is the thing under test and it
+only runs on the platform. Second, when a dependency fights the runtime, replacing it can
+be cheaper and lower-risk than configuring around it — but only if you can prove the
+replacement is equivalent, which is what the existing test suite made possible.
+
+This is also the clearest argument for the deploy-early discipline: the app was fully
+working locally and would have been submitted broken.
+
+### 4. Stack defaults that needed overriding
 
 - **Prisma installed as v7**, which removed `url` from the datasource block in favour of a
   `prisma.config.ts` plus a driver adapter. Correct for a greenfield serverless app with
