@@ -5,9 +5,10 @@ import { useRef, useState } from 'react';
 import { apiFetch } from '@/lib/client';
 
 /**
- * Supported types and the size cap are stated in the UI, not only in the README — the
- * brief calls this out specifically. A user should never have to guess what will be
- * accepted and then find out by failing.
+ * Renders only the button. The "supported types / size cap" hint is required in the UI
+ * (the brief calls it out) but is laid out by the parent underneath the whole button row
+ * — keeping it inside this component made it a second row in a flex item, which centred
+ * the button-plus-caption stack and left this button visibly higher than its neighbours.
  */
 export default function UploadButton({ onError }: { onError: (message: string | null) => void }) {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function UploadButton({ onError }: { onError: (message: string | 
   }
 
   return (
-    <div className="flex flex-col items-end">
+    <>
       <input
         ref={inputRef}
         type="file"
@@ -58,10 +59,6 @@ export default function UploadButton({ onError }: { onError: (message: string | 
       >
         {uploading ? 'Parsing file…' : 'Upload file'}
       </button>
-
-      <span className="mt-1 text-[11px] leading-tight text-zinc-500">
-        .txt, .md, .docx · max 2 MB
-      </span>
-    </div>
+    </>
   );
 }

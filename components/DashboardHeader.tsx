@@ -47,25 +47,33 @@ export default function DashboardHeader({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <UploadButton onError={setError} />
+        {/* All three actions share one row so they align on a common baseline; the upload
+            hint sits under the group rather than under one button. */}
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <UploadButton onError={setError} />
 
-          <button
-            type="button"
-            onClick={createDocument}
-            disabled={creating}
-            className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {creating ? 'Creating…' : 'New document'}
-          </button>
+            <button
+              type="button"
+              onClick={createDocument}
+              disabled={creating}
+              className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {creating ? 'Creating…' : 'New document'}
+            </button>
 
-          <button
-            type="button"
-            onClick={logout}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
-          >
-            Switch user
-          </button>
+            <button
+              type="button"
+              onClick={logout}
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Switch user
+            </button>
+          </div>
+
+          <span className="text-[11px] leading-tight text-zinc-500">
+            Uploads: .txt, .md, .docx · max 2 MB
+          </span>
         </div>
       </div>
 
