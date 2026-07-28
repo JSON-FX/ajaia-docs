@@ -10,9 +10,8 @@ export async function GET() {
 
   try {
     const mod = await import('isomorphic-dompurify');
-    const DOMPurify = mod.default ?? mod;
+    const DOMPurify = (mod.default ?? mod) as { sanitize: (s: string) => string };
     report.importedIsomorphicDompurify = true;
-    // @ts-expect-error - probing the runtime shape deliberately
     report.sanitizeSmokeTest = DOMPurify.sanitize('<p>ok</p><script>bad()</script>');
   } catch (err) {
     report.importedIsomorphicDompurify = false;
