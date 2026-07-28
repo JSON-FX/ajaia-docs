@@ -8,25 +8,75 @@ datasource db {
 }
 
 model User {
-  id        String          @id @default(cuid())
-  email     String          @unique
+  id        String             @id @default(cuid())
+  email     String             @unique
   name      String
-  documents Document[]      @relation("OwnedDocuments")
+  documents Document[]         @relation("OwnedDocuments")
   shares    DocumentShare[]
-  createdAt DateTime        @default(now())
+  revisions DocumentRevision[]
+  comments  Comment[]
+  presence  DocumentPresence[]
+  createdAt DateTime           @default(now())
 }
 
 model Document {
-  id          String          @id @default(cuid())
-  title       String          @default("Untitled document")
-  contentHtml String          @default("<p></p>") @db.Text
+  id          String             @id @default(cuid())
+  title       String             @default("Untitled document")
+  contentHtml String             @default("<p></p>") @db.Text
   ownerId     String
-  owner       User            @relation("OwnedDocuments", fields: [ownerId], references: [id], onDelete: Cascade)
+  owner       User               @relation("OwnedDocuments", fields: [ownerId], references: [id], onDelete: Cascade)
   shares      DocumentShare[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  revisions   DocumentRevision[]
+  comments    Comment[]
+  presence    DocumentPresence[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   @@index([ownerId])
+}
+
+/// A snapshot of a document's prior state, written before an edit overwrites it.
+/// Snapshots are coalesced (see lib/revisions.ts) so 800ms autosaves do not create a row
+/// per keystroke-burst.
+model DocumentRevision {
+  id          String   @id @default(cuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  authorId    String?
+  author      User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  title       String
+  contentHtml String   @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([documentId, createdAt])
+}
+
+/// Document-level comments. Deliberately NOT anchored to text ranges — see ARCHITECTURE.md.
+model Comment {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body       String   @db.Text
+  resolved   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([documentId, createdAt])
+}
+
+/// Heartbeat rows powering the presence indicator. Serverless functions share no memory,
+/// so "who is here" has to live in the database; clients poll and are considered present
+/// for a short window after their last beat.
+model DocumentPresence {
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastSeenAt DateTime @updatedAt
+
+  @@id([documentId, userId])
+  @@index([documentId, lastSeenAt])
 }
 
 model DocumentShare {

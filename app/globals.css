@@ -131,3 +131,53 @@ body {
 .doc-content s {
   text-decoration: line-through;
 }
+
+/*
+ * Print / Save-as-PDF. Export to PDF routes through the browser's own print engine rather
+ * than a server-side renderer (see components/ExportMenu.tsx), so the print stylesheet IS
+ * the PDF layout: drop all app chrome and leave the document itself on a clean page.
+ */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .doc-sheet {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .doc-content {
+    padding: 0 !important;
+  }
+
+  /* Keep headings with the text that follows them. */
+  .doc-content h1,
+  .doc-content h2,
+  .doc-content h3 {
+    break-after: avoid;
+  }
+
+  .doc-content blockquote,
+  .doc-content pre,
+  .doc-content li {
+    break-inside: avoid;
+  }
+
+  /* Print the destination of links, since they aren't clickable on paper. */
+  .doc-content a::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: #555;
+  }
+}

@@ -36,6 +36,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
       initialContent={document.contentHtml}
       ownerName={document.owner.name}
       role={role}
+      currentUserId={session.userId}
     />
   );
 }

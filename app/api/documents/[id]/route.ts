@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { canEdit, resolveAccess } from '@/lib/access';
 import { exceedsSizeLimit, sanitizeHtml } from '@/lib/sanitize';
+import { snapshotBeforeEdit } from '@/lib/revisions';
 import { forbidden, internal, notFound, unauthenticated, validationFailed } from '@/lib/errors';
 
 type Context = { params: Promise<{ id: string }> };
@@ -75,6 +76,19 @@ export async function PATCH(request: NextRequest, { params }: Context) {
 
     if (Object.keys(data).length === 0) {
       return validationFailed('Nothing to update.');
+    }
+
+    // Snapshot the pre-edit state for version history. Coalesced internally, so rapid
+    // autosaves do not each produce an entry. Never let history failure block a save —
+    // losing a revision is recoverable, losing the user's typing is not.
+    try {
+      const before = await prisma.document.findUnique({
+        where: { id },
+        select: { title: true, contentHtml: true },
+      });
+      if (before) await snapshotBeforeEdit(id, session.userId, before);
+    } catch (err) {
+      console.error('[revision snapshot]', err);
     }
 
     const updated = await prisma.document.update({

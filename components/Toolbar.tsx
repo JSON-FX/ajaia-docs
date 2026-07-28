@@ -81,7 +81,7 @@ export default function Toolbar({ editor }: { editor: Editor }) {
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b border-zinc-200 bg-white px-4 py-2">
+    <div className="no-print flex flex-wrap items-center gap-1 border-b border-zinc-200 bg-white px-4 py-2">
       {buttons.map((button, index) =>
         'divider' in button ? (
           <span key={`divider-${index}`} className="mx-1 h-5 w-px bg-zinc-200" />
