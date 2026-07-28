@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f7f9;
+  --foreground: #16181d;
 }
 
 @theme inline {
@@ -12,15 +12,122 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/*
+ * Deliberately light-only. With the scaffold's prefers-color-scheme block left in, a
+ * reviewer whose OS is in dark mode would get a dark page background behind a white
+ * document sheet and light-on-light chrome. Theming is out of scope (spec §1).
+ */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Tailwind's preflight strips heading and list styling. TipTap emits plain semantic HTML,
+ * so the editor surface needs these back or every document renders as undifferentiated
+ * body text — headings would be invisible, which breaks the core demo.
+ */
+.doc-content {
+  line-height: 1.7;
+}
+
+.doc-content:focus {
+  outline: none;
+}
+
+.doc-content h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 1.5rem 0 0.75rem;
+}
+
+.doc-content h2 {
+  font-size: 1.375rem;
+  font-weight: 650;
+  line-height: 1.3;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.doc-content h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+}
+
+.doc-content h1:first-child,
+.doc-content h2:first-child,
+.doc-content h3:first-child {
+  margin-top: 0;
+}
+
+.doc-content p {
+  margin: 0.75rem 0;
+}
+
+.doc-content ul,
+.doc-content ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.doc-content ul {
+  list-style: disc;
+}
+
+.doc-content ol {
+  list-style: decimal;
+}
+
+.doc-content li {
+  margin: 0.25rem 0;
+}
+
+.doc-content li > p {
+  margin: 0;
+}
+
+.doc-content blockquote {
+  border-left: 3px solid #d3d7de;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: #4d535e;
+  font-style: italic;
+}
+
+.doc-content code {
+  background: #eef0f3;
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.doc-content pre {
+  background: #16181d;
+  color: #f2f4f7;
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.doc-content pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+.doc-content a {
+  color: #1a56c4;
+  text-decoration: underline;
+}
+
+.doc-content u {
+  text-decoration: underline;
+}
+
+.doc-content s {
+  text-decoration: line-through;
 }

@@ -1,0 +1,11 @@
+Meeting notes - vendor sync
+
+Attendees: Alice Reyes, Bob Santos, Carol Dimaano.
+
+Bob raised the support response time issue again. We agreed to escalate
+it in the next review cycle rather than renegotiating mid-term.
+
+Carol will circulate the revised payment schedule.
+
+Note that this is plain text: the characters < > & are escaped rather than
+treated as markup, so nothing here can inject HTML into the document.
