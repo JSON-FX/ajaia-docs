@@ -1,4 +1,4 @@
-import DOMPurify from 'isomorphic-dompurify';
+import sanitize from 'sanitize-html';
 
 /**
  * The XSS boundary.
@@ -10,9 +10,19 @@ import DOMPurify from 'isomorphic-dompurify';
  *
  * This allowlist is deliberately tight: it matches exactly what our TipTap configuration
  * (StarterKit + Underline) can render. Anything else is noise at best and an injection
- * vector at worst. One constant, imported by both POST /api/upload and
+ * vector at worst. One module, imported by both POST /api/upload and
  * PATCH /api/documents/:id, so the two paths can never drift apart.
+ *
+ * WHY sanitize-html AND NOT DOMPurify: isomorphic-dompurify depends on jsdom, which
+ * resolves internals through dynamic requires that neither Turbopack nor webpack could
+ * trace into a Vercel serverless bundle. Every route importing this module returned an
+ * opaque 500 in production — saving a document was broken — while working perfectly on
+ * `next start` locally, because a local server still resolves from node_modules on disk.
+ * `serverExternalPackages` and a webpack build were both tried and neither fixed it.
+ * sanitize-html is pure JavaScript with no DOM emulation, so there is nothing to fail to
+ * bundle. It is allowlist-based in the same way, and the test suite pins the behaviour.
  */
+
 export const ALLOWED_TAGS = [
   'p',
   'br',
@@ -38,16 +48,17 @@ export const ALLOWED_ATTR = ['href', 'target', 'rel'] as const;
 export const MAX_CONTENT_BYTES = 1_000_000;
 
 export function sanitizeHtml(dirty: string): string {
-  return DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS: [...ALLOWED_TAGS],
-    ALLOWED_ATTR: [...ALLOWED_ATTR],
-    ALLOW_DATA_ATTR: false,
-    // NOTE: do not add `USE_PROFILES: { html: true }` here. DOMPurify treats a profile as
-    // the base allowlist and merely *appends* ALLOWED_TAGS to it, so setting it silently
-    // widens this list to the entire HTML profile — <img>, <table>, <div> and friends all
-    // start passing. Caught by an upload probe where `<img src=x onerror=...>` came back
-    // with the tag intact (the onerror attribute was stripped, so it looked safe at a
-    // glance). Tags outside the list must be dropped, not just de-fanged.
+  return sanitize(dirty, {
+    allowedTags: [...ALLOWED_TAGS],
+    // Attributes are scoped to <a>; nothing else needs any, so nothing else gets any.
+    allowedAttributes: { a: [...ALLOWED_ATTR] },
+    // Blocks javascript: and data: URLs in href.
+    allowedSchemes: ['http', 'https', 'mailto'],
+    // Disallowed tags are dropped but their text is kept, so stripping a stray <div>
+    // wrapper does not silently delete the user's paragraph inside it. The exception is
+    // nonTextTags below, whose *contents* are never text worth keeping.
+    disallowedTagsMode: 'discard',
+    nonTextTags: ['script', 'style', 'textarea', 'option', 'noscript', 'iframe'],
   });
 }
 
