@@ -5,6 +5,8 @@ with per-user Viewer/Editor permissions.
 
 > **Live demo:** **https://ajaia-docs-assessment-jayson-alanano.vercel.app**
 >
+> **Walkthrough video:** **https://www.loom.com/share/9e277672e1734f3fb0afce3085f2e9c5**
+>
 > **Sign in as `alice@ajaia.test`.** One click, no password. Alice already owns two
 > documents and has a third shared with her by Bob as a **Viewer**, so the sharing and
 > read-only features are visible immediately without any setup.

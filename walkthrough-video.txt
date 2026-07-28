@@ -1,0 +1,18 @@
+Ajaia Docs — walkthrough video (unlisted)
+
+https://www.loom.com/share/9e277672e1734f3fb0afce3085f2e9c5
+
+Live app:   https://ajaia-docs-assessment-jayson-alanano.vercel.app
+Repository: https://github.com/JSON-FX/ajaia-docs
+
+Sign in as alice@ajaia.test — one click, no password.
+
+Covered in the video:
+  - Main user flow: create, format, autosave, rename, reload
+  - Upload a .docx into an editable document
+  - Sharing, read-only Viewer mode, and the server rejecting a Viewer's write with 403
+  - Version history and Markdown export
+  - Key implementation decisions: the single access chokepoint, parse-and-discard upload,
+    server-side sanitisation on every write, and why comments are document-level
+  - What was deprioritised: real-time collaborative editing, and why
+  - AI workflow: a concrete example of AI-written code that was wrong and how it was caught

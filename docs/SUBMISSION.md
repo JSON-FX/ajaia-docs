@@ -7,7 +7,7 @@ assignment.
 |---|---|
 | **Live app** | **https://ajaia-docs-assessment-jayson-alanano.vercel.app** |
 | **Repository** | **https://github.com/JSON-FX/ajaia-docs** |
-| **Walkthrough video** | see `walkthrough-video.txt` |
+| **Walkthrough video** | **https://www.loom.com/share/9e277672e1734f3fb0afce3085f2e9c5** |
 | **Sign in as** | `alice@ajaia.test` — one click, no password |
 
 ---
