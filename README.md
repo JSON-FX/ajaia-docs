@@ -1,36 +1,169 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ajaia Docs
 
-## Getting Started
+A lightweight collaborative document editor — create, format, upload, and share documents
+with per-user Viewer/Editor permissions.
 
-First, run the development server:
+> **Live demo:** _(pending deploy — see “Deployment” below)_
+>
+> **Sign in as `alice@ajaia.test`.** One click, no password. Alice already owns two
+> documents and has a third shared with her by Bob as a **Viewer**, so the sharing and
+> read-only features are visible immediately without any setup.
+
+---
+
+## Seeded accounts
+
+Authentication is **mocked** for this assignment — there are no passwords. The login
+screen verifies that the email belongs to a seeded user and issues a signed, httpOnly
+session cookie. It is not real auth and is not pretending to be.
+
+| Email | Name | Starting state |
+|-------|------|----------------|
+| `alice@ajaia.test` | Alice Reyes | Owns 2 documents; has Bob's document shared to her as **Viewer** |
+| `bob@ajaia.test` | Bob Santos | Owns 1 document, shared to Alice as Viewer |
+| `carol@ajaia.test` | Carol Dimaano | No documents — useful as a share target |
+
+The login page has one-click buttons for all three. That is a deliberate reviewer-UX
+choice: testing the sharing flow means switching identity repeatedly, and a password form
+would add friction to every switch for no benefit.
+
+### The 60-second review path
+
+1. Sign in as **Alice** → dashboard shows **My documents** (2) and **Shared with me** (1).
+2. Open **Q3 Product Review** → format text, stop typing, watch it autosave.
+3. Reload the page → your edit is still there.
+4. Back to the dashboard → open **Vendor contract review** (the shared one) → it is
+   read-only, with the toolbar hidden and a banner explaining why.
+5. Open Alice's document → **Share** → add `carol@ajaia.test` as **Editor**.
+6. **Switch user** → sign in as Carol → the document now appears under *Shared with me*
+   with an **Editor** badge, and she can edit it.
+
+---
+
+## Features
+
+- **Rich-text editing** — bold, italic, underline, H1, H2, paragraph, bulleted and
+  numbered lists, with active-state highlighting on the toolbar.
+- **Debounced autosave** (800 ms) with a visible status: `Saving… / All changes saved /
+  Save failed — Retry`. A manual **Save** button is there too.
+- **Rename** — edit the title inline; it saves on blur.
+- **Upload `.txt`, `.md`, `.docx`** → becomes a new editable document. Limits are stated
+  in the UI, not just here.
+- **Sharing** — grant another user Viewer or Editor access by email, see who has access,
+  and revoke it.
+- **Read-only mode** for Viewers — enforced on the server, not just hidden in the UI.
+
+### Upload limits
+
+| | |
+|---|---|
+| Accepted types | `.txt`, `.md`, `.docx` |
+| Maximum file size | 2 MB |
+| Maximum stored content | 1 MB of HTML |
+
+Sample files to try are in [`samples/`](samples/).
+
+Uploaded files are parsed into HTML on the server and **the original bytes are
+discarded** — nothing is written to disk or object storage. See
+[ARCHITECTURE.md](ARCHITECTURE.md) for why.
+
+---
+
+## Running locally
+
+### Prerequisites
+
+- Node.js 20.9+ (built and tested on Node 26)
+- A PostgreSQL database — [Neon](https://neon.tech)'s free tier is what this was built
+  against, but any Postgres works.
+
+### Setup
+
+```bash
+npm install
+```
+
+Copy the environment template and fill it in:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | Postgres connection string. On serverless, prefer Neon's **pooled** endpoint (the host containing `-pooler`). |
+| `SESSION_SECRET` | Signs the session cookie. Generate with `openssl rand -hex 32`. |
+
+Create the schema and seed the three demo users and documents:
+
+```bash
+npm run db:push
+```
+
+```bash
+npm run db:seed
+```
+
+Start the dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | What it does |
+|---------|--------------|
+| `npm run dev` | Start the dev server on port 3000 |
+| `npm run build` | Production build |
+| `npm start` | Serve the production build |
+| `npm test` | Run the Vitest suite (21 tests) |
+| `npm run test:watch` | Vitest in watch mode |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint |
+| `npm run db:push` | Push the Prisma schema to the database |
+| `npm run db:seed` | Seed users and demo documents (idempotent — safe to re-run) |
 
-## Learn More
+### Tests
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm test
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+21 tests across two files, and they need **no database** — the access tests inject a fake
+Prisma client.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `tests/access.test.ts` — the permission model. Covers owner/editor/viewer/non-member
+  resolution, the stale-share-row case, and `canEdit`/`canManage`. Crucially it also
+  drives the real `PATCH /api/documents/:id` handler to assert a Viewer is rejected with
+  **403 at the HTTP boundary** — a unit test of the resolver alone would still pass if a
+  route forgot to call it.
+- `tests/sanitize.test.ts` — the XSS boundary, with 12 payloads. Added after a real bug;
+  see [AI_WORKFLOW.md](AI_WORKFLOW.md).
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deployed on Vercel. To deploy your own copy:
+
+1. Push this repository to GitHub.
+2. Import it in Vercel.
+3. Set `DATABASE_URL` and `SESSION_SECRET` as environment variables.
+4. Deploy, then seed the production database once with `npm run db:seed` pointed at the
+   production `DATABASE_URL`.
+
+`prisma generate` runs automatically via the `postinstall` script, which Vercel's build
+requires.
+
+---
+
+## Documentation
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — stack rationale, data model, the access-control
+  chokepoint, the parse-and-discard upload decision, and what was deliberately cut.
+- [AI_WORKFLOW.md](AI_WORKFLOW.md) — how AI was used, what was rejected, and how the work
+  was verified.
+- [SUBMISSION.md](SUBMISSION.md) — deliverables manifest and project status.
