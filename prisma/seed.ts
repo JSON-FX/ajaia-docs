@@ -108,7 +108,62 @@ async function main() {
     },
   });
 
-  console.log('Seeded 3 users, 3 documents, 1 share.');
+  // Comments and revision history are seeded for the same reason the share is: a reviewer
+  // should see these features working before they configure anything. Fixed ids keep the
+  // seed idempotent.
+  const comments = [
+    {
+      id: 'seed-comment-1',
+      documentId: 'seed-doc-alice-review',
+      authorId: bob.id,
+      body: 'Can we get numbers behind the autosave claim before this goes out?',
+      resolved: false,
+    },
+    {
+      id: 'seed-comment-2',
+      documentId: 'seed-doc-alice-review',
+      authorId: alice.id,
+      body: 'Good catch — resolved, I added the 800ms detail to the list above.',
+      resolved: true,
+    },
+  ];
+
+  for (const comment of comments) {
+    await prisma.comment.upsert({
+      where: { id: comment.id },
+      update: { body: comment.body, resolved: comment.resolved },
+      create: comment,
+    });
+  }
+
+  const revisions = [
+    {
+      id: 'seed-revision-1',
+      documentId: 'seed-doc-alice-review',
+      authorId: alice.id,
+      title: 'Q3 Product Review',
+      contentHtml:
+        '<h1>Q3 Product Review</h1><p>First draft — just the headings for now.</p><h2>What shipped</h2><p>TBD</p>',
+    },
+    {
+      id: 'seed-revision-2',
+      documentId: 'seed-doc-alice-review',
+      authorId: alice.id,
+      title: 'Q3 Product Review',
+      contentHtml:
+        '<h1>Q3 Product Review</h1><p>Second pass, before the open questions section was added.</p><h2>What shipped</h2><ul><li>Rich-text editing</li><li>Autosave</li></ul>',
+    },
+  ];
+
+  for (const revision of revisions) {
+    await prisma.documentRevision.upsert({
+      where: { id: revision.id },
+      update: { title: revision.title, contentHtml: revision.contentHtml },
+      create: revision,
+    });
+  }
+
+  console.log('Seeded 3 users, 3 documents, 1 share, 2 comments, 2 revisions.');
 }
 
 main()

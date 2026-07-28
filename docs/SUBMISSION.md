@@ -31,35 +31,54 @@ assignment.
 - Share a document by email as Viewer or Editor, list everyone with access, and revoke it.
 - Viewers get a read-only editor with the toolbar hidden and an explanatory banner — and
   the server rejects their writes with 403 independently of the UI.
-- `npm test` passes: 21 tests, no database required, including one that drives the real
+- **Presence indicators** — an avatar chip shows who else has the document open, polled on
+  an 8-second heartbeat.
+- **Comments** — document-level, with resolve/reopen and delete. Viewers can comment
+  without gaining write access.
+- **Version history** — a snapshot per editing session, with preview and restore. Restoring
+  saves the current version first, so it is itself undoable.
+- **Export** — download as Markdown, or Print / Save as PDF through the browser's print
+  engine with a dedicated print stylesheet.
+- `npm test` passes: 37 tests, no database required, including one that drives the real
   PATCH route handler to prove a Viewer is rejected at the HTTP boundary.
 
 ### What is incomplete
 
-- **No real-time collaboration.** Concurrent editors overwrite each other — last write
-  wins. Cut deliberately; it would have consumed the whole timebox and still shipped
-  half-finished. Reasoning in [ARCHITECTURE.md](ARCHITECTURE.md).
+- **No real-time collaborative editing.** There are presence indicators, but no shared
+  editing state and no conflict resolution — two people typing at once still overwrite each
+  other, last write wins. The CRDT/OT layer was cut deliberately; reasoning in
+  [ARCHITECTURE.md](ARCHITECTURE.md). Presence makes that risk visible rather than silent,
+  which is the honest half of the feature.
+- **Comments are document-level, not inline.** They are not anchored to text ranges.
+  Anchoring needs a custom TipTap mark plus logic to keep anchors valid as the surrounding
+  text changes, and a comment pointing at the wrong sentence is worse than one pointing at
+  the document.
+- **PDF export uses the browser's print dialog**, not a server-side renderer. A real PDF
+  pipeline means headless Chromium in a serverless function — the same class of dependency
+  that already broke this deployment once. The button is labelled for what it actually does.
 - **Auth is mocked.** No passwords or OAuth — anyone who knows a seeded email can sign in
   as that user. The brief permits this explicitly.
 - **No document deletion.** Cut under the compressed timebox and not in the brief's
   requirements. `canManage` already supports it; it needs a route handler and a button.
-- **No Markdown export.** Stretch-only by instruction, to be built after core work. Core
-  work plus verification used the time.
 - **Desktop-first.** Does not break on mobile, but was not optimised for it.
-- **No pagination** on the dashboard. Fine at seeded scale, wrong at a thousand documents.
+- **No pagination** on the dashboard, and none on comments or revision history. Fine at
+  seeded scale, wrong at a thousand.
 
 ### What I would build next with 2–4 more hours
 
 1. **Optimistic concurrency to replace last-write-wins** — send `updatedAt` with each
-   PATCH, reject stale writes, and surface the conflict. The honest fix for the biggest
-   correctness gap, at a fraction of the cost of real collaboration.
-2. **Presence indicators via polling** — buys most of the perceived value of collaboration
-   cheaply, and makes the overwrite risk visible instead of silent.
-3. **Version history** — a revision row per settled save, with restore. Mitigates the same
-   risk and is genuinely useful on its own.
-4. **Share-by-link with expiry** — the most-requested sharing feature in real products,
-   and it slots into `resolveAccess` as one more branch rather than a rewrite.
-5. **PDF export** — higher demand than Markdown export, but needs a rendering dependency.
+   PATCH, reject stale writes, and surface the conflict. Now the single biggest correctness
+   gap: presence tells you someone else is editing, but nothing yet stops you overwriting
+   them. This is the honest fix, at a fraction of the cost of real collaboration.
+2. **Inline comment anchoring** — a TipTap mark storing a comment id, plus reconciliation
+   so anchors survive edits to surrounding text. Turns the existing comments feature from
+   document-level into true suggestion mode.
+3. **Share-by-link with expiry** — the most-requested sharing feature in real products, and
+   it slots into `resolveAccess` as one more branch rather than a rewrite.
+4. **Server-rendered PDF** — replace print-to-PDF with a real renderer so exports are
+   consistent across browsers and can carry headers, footers, and page numbers.
+5. **Pagination and search** — the dashboard, comments, and revision list all load
+   everything. Fine at three documents, wrong at a thousand.
 
 ---
 

@@ -19,40 +19,48 @@
 - Share a document by email as Viewer or Editor, see everyone with access, and revoke it.
 - Viewers get a read-only editor with the toolbar hidden and an explanatory banner — and
   the server rejects their writes with 403 regardless of the UI.
-- 21 automated tests pass with `npm test`, including a test that drives the real PATCH
+- **Presence indicators** show who else has a document open, on an 8-second heartbeat.
+- **Comments** at document level, with resolve/reopen and delete. Viewers may comment
+  without gaining write access.
+- **Version history** with a snapshot per editing session, preview, and restore — and
+  restoring snapshots the current state first, so it is itself undoable.
+- **Export** to Markdown as a file download, and Print / Save as PDF via a print stylesheet.
+- 37 automated tests pass with `npm test`, including a test that drives the real PATCH
   route handler to prove a Viewer is rejected at the HTTP boundary.
 
 ### What is incomplete
 
-- **No real-time collaboration.** Two people editing the same document at the same time
-  will overwrite each other — last write wins. This was cut deliberately; see below.
+- **No real-time collaborative editing.** Presence exists, but there is no shared editing
+  state and no conflict resolution — concurrent typing still resolves last-write-wins. The
+  CRDT/OT layer was cut deliberately; see below.
+- **Comments are document-level, not inline.** Not anchored to text ranges — see the
+  reasoning under "Comments" below.
+- **PDF export is print-to-PDF**, not a server-side render.
 - **Auth is mocked.** No passwords, no OAuth, no session store. Anyone who knows a seeded
   email can sign in as that user. The brief permits this explicitly.
 - **No document deletion.** Cut under the compressed timebox; it was not in the brief's
   requirements. The API and the access chokepoint already support it via `canManage` —
   it is a route handler and a button, not a design change.
-- **No Markdown export.** This was listed as stretch-only, to be built after core work.
-  Core work plus verification consumed the timebox.
 - **Desktop-first.** The layout does not break on a phone but was not optimised for one.
-- **No pagination.** The dashboard loads every document a user can see. Fine at seeded
-  scale, wrong at a thousand.
+- **No pagination** on the dashboard, comments, or revision history. Fine at seeded scale,
+  wrong at a thousand.
 
 ### What I would build next with 2–4 more hours
 
 1. **Optimistic-concurrency handling to replace last-write-wins.** Send the document's
    `updatedAt` with each PATCH and reject the write if it has moved; show the user a
-   "this document changed elsewhere" prompt. This is the honest fix for the biggest
-   correctness gap, and it is far cheaper than real-time collaboration.
-2. **Presence indicators via polling.** A 5-second poll showing who else has the document
-   open. Buys most of the perceived value of collaboration for a fraction of the cost of
-   a CRDT, and makes the last-write-wins risk visible rather than silent.
-3. **Document version history.** A `DocumentRevision` row per save-settle, with restore.
-   Directly mitigates the same overwrite risk and is a genuinely useful editor feature.
-4. **Share-by-link with expiry.** The most-requested sharing feature in real products,
+   "this document changed elsewhere" prompt. This is now the single biggest correctness
+   gap — presence tells you someone else is in the document, but nothing yet stops you
+   overwriting them.
+2. **Inline comment anchoring.** A TipTap mark carrying a comment id, plus reconciliation
+   so anchors stay valid as surrounding text changes. Upgrades the existing comments
+   feature into genuine suggestion mode.
+3. **Share-by-link with expiry.** The most-requested sharing feature in real products,
    and the data model already funnels through one access resolver, so it is an additional
    branch in `resolveAccess` rather than a rewrite.
-5. **PDF export.** Higher user demand than Markdown export, but needs a rendering
-   dependency, so it lands behind the items above.
+4. **Server-rendered PDF.** Replaces print-to-PDF so output is consistent across browsers
+   and can carry headers, footers, and page numbers.
+5. **Pagination and search.** Every list currently loads in full.
 
 ---
 
@@ -252,25 +260,74 @@ and an injection vector at worst.
 
 ## Deliberate cuts
 
-### Real-time collaboration — the headline cut
+### Real-time collaborative editing — the headline cut
 
-**Not built. This is the most significant thing missing, and it was cut on purpose.**
+**The editing layer is not built, and that was on purpose.** Presence indicators exist;
+shared editing state does not.
 
 Real-time collaborative editing means CRDTs or operational transforms, a websocket
-transport, presence, cursor rendering, and offline reconciliation. It would have consumed
-the entire timebox on its own and still landed half-finished. A half-working presence
-indicator that flickers, or a merge that silently drops a paragraph, is worse than an
-honest absence — it looks like a feature while behaving like a bug.
+transport, cursor rendering, and offline reconciliation. It would have consumed the entire
+timebox on its own and still landed half-finished. A merge that silently drops a paragraph
+is worse than an honest absence — it looks like a feature while behaving like a bug.
 
-What is here instead: debounced autosave with **last-write-wins**. For the actual usage
-this product supports — people working on documents at different times, sharing them for
-review — that is adequate and, importantly, predictable. The failure mode is
-understandable ("the last save wins") rather than mysterious.
+What is here instead: debounced autosave with **last-write-wins**, plus a presence
+indicator so you can see when someone else is in the document. That combination is the
+deliberate middle ground. Presence is cheap — a heartbeat row and a poll — and it converts
+the concurrency risk from invisible into visible. It does not pretend to solve it.
 
-The right next step is *not* to start building CRDTs. It is optimistic concurrency: send
-`updatedAt` with each write, reject stale ones, and tell the user. That converts a silent
-overwrite into a visible, recoverable conflict for a fraction of the effort — which is why
-it is first on the list above.
+For the usage this product actually supports — people working on documents at different
+times, sharing them for review — last-write-wins is adequate and, importantly,
+predictable. The failure mode is understandable ("the last save wins") rather than
+mysterious.
+
+The right next step is still *not* CRDTs. It is optimistic concurrency: send `updatedAt`
+with each write, reject stale ones, and tell the user. That converts a silent overwrite
+into a visible, recoverable conflict for a fraction of the effort — which is why it
+remains first on the list above.
+
+### Comments: document-level, not inline
+
+Comments attach to the document, not to a text range. Inline anchoring needs a custom
+TipTap mark storing a comment id, plus reconciliation logic to keep that anchor meaningful
+as the surrounding text is edited, split, or deleted. Done badly it produces comments that
+silently drift onto the wrong sentence — which is worse than a comment that simply refers
+to the document, because the reader trusts the anchor.
+
+Two design details worth noting:
+
+- **Viewers can comment.** That is the point of read-only sharing: a reviewer participates
+  without being handed write access. Comments live in their own table rather than inside
+  `contentHtml`, so permitting this does not widen who can mutate the document.
+- **Comment bodies are stored and rendered as plain text**, never as HTML. That sidesteps
+  the sanitiser question entirely for this surface — there is no markup to allowlist.
+
+### Version history: coalesced snapshots
+
+The hard part is not storing snapshots, it is not storing too many. Autosave fires 800 ms
+after typing stops, so a naive "snapshot on every write" would produce a row every few
+seconds of drafting and a history no human can read.
+
+So a snapshot records the document's state *before* an edit, and only if the newest
+existing snapshot is older than a 45-second window. The result is roughly one entry per
+editing session. History is capped at 30 entries per document, and restoring snapshots the
+current state first — so a restore is itself undoable.
+
+Snapshot failure is caught and logged rather than propagated: losing a revision is
+recoverable, losing the user's typing is not.
+
+### Export: Markdown by hand, PDF by the browser
+
+The HTML→Markdown converter is hand-rolled. The obvious choice, `turndown`, needs a DOM and
+therefore jsdom on the server — the exact dependency whose serverless bundling already
+broke this deployment once. Writing it by hand is only tractable because the input is not
+arbitrary HTML: everything in the database has already passed the sanitiser's 16-tag
+allowlist, so the converter has a closed, known set of cases. It is covered by 16 tests.
+
+PDF export routes through the browser's own print engine with a dedicated print stylesheet,
+rather than headless Chromium in a serverless function. The button says "Print / Save as
+PDF" because that is honestly what it does — the alternative was a large binary with
+exactly the bundling characteristics that had already cost this project a broken
+deployment.
 
 ### Also cut, and why
 
