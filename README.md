@@ -133,7 +133,8 @@ Then open http://localhost:3000.
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
 | `npm run db:push` | Push the Prisma schema to the database |
-| `npm run db:seed` | Seed users and demo documents (idempotent — safe to re-run) |
+| `npm run db:seed` | Seed users and demo content (upsert-only — idempotent and safe against production, but it never deletes) |
+| `npm run db:reset` | **Destructive.** Delete everything that isn't seeded, then re-seed. Use this to clear uploads, ad-hoc shares, and comments after trying the app |
 
 ### Tests
 

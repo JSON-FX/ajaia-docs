@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "tsx prisma/reset.ts && tsx prisma/seed.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
