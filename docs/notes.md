@@ -67,6 +67,32 @@ Kept `access.test.ts` (required) and added `sanitize.test.ts` off the back of bu
 that one guards a boundary that had actually broken, which is worth more than the
 `parsers.test.ts` the compressed plan cut. 21 tests total.
 
+## Late scope extension (deliberate, at the user's call)
+
+With ~85 min of build time left after deployment was verified, added presence indicators,
+comments, version history, and Markdown/PDF export. I flagged the risk first — the docs
+argued these were deliberate cuts, so building them meant rewriting the status blocks and
+the collaboration section or the submission would contradict itself. Went ahead, and the
+docs were rewritten to scope the headline cut precisely: presence exists, shared editing
+state does not.
+
+Design calls made to keep these shippable rather than half-built:
+
+- **Comments are document-level, not range-anchored.** Inline anchors need a TipTap mark
+  plus reconciliation as surrounding text changes; drifting anchors are worse than no
+  anchors.
+- **Revision snapshots are coalesced in a 45s window.** Snapshot-per-PATCH would write a
+  row every few seconds against an 800ms autosave. Verified: 5 rapid saves → still 1
+  revision.
+- **PDF is print-to-PDF, not headless Chromium.** After the jsdom failure, deliberately
+  refused to put another large binary with dynamic requires into a lambda.
+- **The Markdown converter is hand-rolled**, because `turndown` needs a DOM — the same trap
+  as bug #3. Tractable only because stored HTML has already passed the 16-tag allowlist.
+
+The chokepoint held: all four features reused `resolveAccess` with zero new permission
+logic. Non-members get 404 on all four new endpoints; viewers get 403 on restore but can
+still comment and export.
+
 ## Deferred (nice-to-haves that were NOT built, on purpose)
 
 - Real-time collaboration (see ARCHITECTURE.md — the headline cut)

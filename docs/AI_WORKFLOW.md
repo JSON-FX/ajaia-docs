@@ -150,6 +150,24 @@ working locally and would have been submitted broken.
 
 ---
 
+### 5. Where the architecture paid for itself
+
+Presence, comments, version history, and export were added late, after the core was
+deployed and verified. All four needed permission checks, and **none of them needed any new
+permission logic** — each route calls the same `resolveAccess` and the same
+`canEdit`/`canManage` predicates.
+
+That was the whole point of the chokepoint, and it is worth stating because it is testable
+rather than aspirational. Verified against the running app: a non-member receives 404 on
+every one of the four new endpoints, and a Viewer receives 403 on revision restore while
+still being able to comment and export. Neither behaviour was written twice.
+
+The one place the pattern needed thought was version history. The naive implementation —
+snapshot on every PATCH — interacts badly with an 800 ms autosave: it produces a row every
+few seconds of drafting and a history no human can read. Snapshots are therefore coalesced
+inside a 45-second window, verified by firing five rapid saves and asserting the revision
+count did not move.
+
 ## How correctness, UX, and reliability were verified
 
 Nothing here was marked done because it looked right in the diff.

@@ -52,6 +52,15 @@ would add friction to every switch for no benefit.
 - **Sharing** — grant another user Viewer or Editor access by email, see who has access,
   and revoke it.
 - **Read-only mode** for Viewers — enforced on the server, not just hidden in the UI.
+- **Presence indicators** — see who else has the document open, on an 8-second heartbeat.
+  This is presence, not collaborative editing: saves are still last-write-wins, and the
+  indicator exists to make that visible rather than to hide it.
+- **Comments** — document-level, with resolve/reopen and delete. **Viewers can comment**
+  without gaining write access, which is the point of read-only sharing.
+- **Version history** — one snapshot per editing session (not per keystroke), with preview
+  and restore. Restoring saves the current version first, so a restore is undoable.
+- **Export** — download as Markdown, or Print / Save as PDF using your browser's print
+  dialog and a dedicated print stylesheet.
 
 ### Upload limits
 
@@ -119,7 +128,7 @@ Then open http://localhost:3000.
 | `npm run dev` | Start the dev server on port 3000 |
 | `npm run build` | Production build |
 | `npm start` | Serve the production build |
-| `npm test` | Run the Vitest suite (21 tests) |
+| `npm test` | Run the Vitest suite (37 tests) |
 | `npm run test:watch` | Vitest in watch mode |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
@@ -132,7 +141,7 @@ Then open http://localhost:3000.
 npm test
 ```
 
-21 tests across two files, and they need **no database** — the access tests inject a fake
+37 tests across three files, and they need **no database** — the access tests inject a fake
 Prisma client.
 
 - `tests/access.test.ts` — the permission model. Covers owner/editor/viewer/non-member
@@ -142,6 +151,9 @@ Prisma client.
   route forgot to call it.
 - `tests/sanitize.test.ts` — the XSS boundary, with 12 payloads. Added after a real bug;
   see [AI_WORKFLOW.md](docs/AI_WORKFLOW.md).
+- `tests/markdown.test.ts` — the hand-rolled HTML→Markdown export converter. It is
+  hand-rolled specifically to avoid a DOM dependency on the server, so its correctness
+  rests on these tests rather than on a library's reputation.
 
 ---
 
